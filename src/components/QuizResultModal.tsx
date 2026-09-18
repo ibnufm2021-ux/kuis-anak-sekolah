@@ -112,7 +112,7 @@ export default function QuizResultModal({
             className="flex-1 py-3 px-4 rounded-xl font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 active:scale-[0.99] transition-all flex items-center justify-center gap-2 text-sm"
           >
             <Eye className="w-4 h-4" />
-            Preview Kuis Langsung
+            Lihat Kuis Langsung
           </button>
           <button
             type="button"

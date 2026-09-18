@@ -33,9 +33,9 @@ export default function LivePreviewModal({
       {/* Top Bar Controls */}
       <div className="flex items-center justify-between bg-slate-800 text-white px-4 py-2.5 rounded-t-2xl max-w-5xl w-full mx-auto border-b border-slate-700">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-bold">Preview Kuis Offline</span>
+          <span className="text-sm font-bold">Lihat Kuis Langsung (Offline)</span>
           <span className="text-xs bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full font-medium">
-            Live Sandbox
+            Simulasi Offline
           </span>
         </div>
 
