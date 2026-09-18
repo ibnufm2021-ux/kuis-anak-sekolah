@@ -1,7 +1,136 @@
-import { GeneratedQuizData } from "./types";
+import { GeneratedQuizData, EducationLevel } from "./types";
+
+type GenderTone = "boy" | "girl" | "neutral";
+
+interface QuizThemeConfig {
+  primary: string;
+  primaryHover: string;
+  primaryLight: string;
+  bgGradient: string;
+  cardRadius: string;
+  fontFamily: string;
+  avatarIcon: string;
+  startBtnText: string;
+  vibeTag: string;
+  vibeText: string;
+}
+
+function detectGenderTone(name: string): GenderTone {
+  const n = name.trim().toLowerCase();
+
+  const boyKeywords = [
+    "budi", "muhammad", "mohammad", "ahmad", "farhan", "rayyan", "zayan",
+    "kevin", "rizky", "rizki", "dimas", "bagus", "arya", "yusuf", "dani",
+    "bayu", "pratama", "putra", "ilham", "fajar", "aditya", "adam", "reza",
+    "aldy", "aldi", "fathir", "hafidz", "kenzie", "kenzo", "alif", "arkhan",
+    "danu", "gilang", "fauzan", "iqbal", "ridho", "wahyu", "arief", "arif",
+    "dika", "andika", "bima", "satria", "raka", "faiz", "ibran", "ibnu", "zaki"
+  ];
+
+  const girlKeywords = [
+    "nisa", "annisa", "aisyah", "putri", "zahra", "bella", "nayla", "siti",
+    "fatimah", "anisa", "rania", "salma", "tiara", "dewi", "ayu", "amanda",
+    "kirana", "maya", "nur", "safira", "nadia", "citra", "lestari", "rahma",
+    "syifa", "kayla", "tasya", "dinda", "mutiara", "amelia", "intan", "fadilla",
+    "salsabila", "hanum", "nabila", "cantika", "chandra", "khadijah", "alyssa", "hana"
+  ];
+
+  for (const w of boyKeywords) {
+    if (n.includes(w)) return "boy";
+  }
+  for (const w of girlKeywords) {
+    if (n.includes(w)) return "girl";
+  }
+
+  // Suffix heuristic nama Indonesia umum (standar, tidak berlebihan)
+  if (/(wati|putri|ani|iyah|iyyah|ina)$/.test(n)) return "girl";
+  if (/(wan|putra|syah|din|to|no)$/.test(n)) return "boy";
+
+  return "neutral";
+}
+
+function resolveQuizTheme(level: EducationLevel, childName: string): QuizThemeConfig {
+  const gender = detectGenderTone(childName);
+
+  // Palet Warna: Standar, elegan, tidak norak / ekstrim
+  let primary = "#6366f1"; // Indigo neutral
+  let primaryHover = "#4f46e5";
+  let primaryLight = "#e0e7ff";
+  let bgGradient = "linear-gradient(135deg, #eef2ff 0%, #f5f3ff 50%, #fef3c7 100%)";
+
+  if (gender === "boy") {
+    primary = "#0284c7"; // Ocean Sky Blue (segar, maskulin ramah)
+    primaryHover = "#0369a1";
+    primaryLight = "#e0f2fe";
+    bgGradient = "linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #fef3c7 100%)";
+  } else if (gender === "girl") {
+    primary = "#e11d48"; // Rose Coral (lembut, anggun)
+    primaryHover = "#be123c";
+    primaryLight = "#ffe4e6";
+    bgGradient = "linear-gradient(135deg, #fff1f2 0%, #fdf2f8 50%, #fef3c7 100%)";
+  }
+
+  // Nuansa & Tipografi Berdasarkan Jenjang Sekolah
+  switch (level) {
+    case "TK":
+      return {
+        primary,
+        primaryHover,
+        primaryLight,
+        bgGradient,
+        cardRadius: "24px",
+        fontFamily: "'Quicksand', 'Nunito', 'Comic Sans MS', system-ui, sans-serif",
+        avatarIcon: gender === "boy" ? "🦖" : gender === "girl" ? "🦄" : "🎨",
+        startBtnText: "🎮 Mulai Main Kuis Seru!",
+        vibeTag: "Taman Kanak-Kanak • Playful Mode",
+        vibeText: "✨ Main tebak-tebakan seru bareng kuis pintar! Soal selalu baru tiap kali diulang.",
+      };
+    case "SD":
+      return {
+        primary,
+        primaryHover,
+        primaryLight,
+        bgGradient,
+        cardRadius: "18px",
+        fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+        avatarIcon: gender === "boy" ? "⚽" : gender === "girl" ? "⭐" : "🎒",
+        startBtnText: "🚀 Mulai Latihan Kuis!",
+        vibeTag: "Sekolah Dasar • Ceria & Petualang",
+        vibeText: "✨ Soal diacak otomatis dari bank soal, bisa diulang berkali-kali tanpa bosan!",
+      };
+    case "SMP":
+      return {
+        primary,
+        primaryHover,
+        primaryLight,
+        bgGradient,
+        cardRadius: "14px",
+        fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+        avatarIcon: "📐",
+        startBtnText: "🎯 Mulai Uji Kemampuan",
+        vibeTag: "Sekolah Menengah Pertama • Modern Academy",
+        vibeText: "💡 Latihan mandiri terstruktur dengan penilaian instan dan pembahasan lengkap.",
+      };
+    case "SMA":
+    default:
+      return {
+        primary,
+        primaryHover,
+        primaryLight,
+        bgGradient,
+        cardRadius: "10px",
+        fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+        avatarIcon: "🎓",
+        startBtnText: "⏱️ Mulai Sesi Ujian Mandiri",
+        vibeTag: "Sekolah Menengah Atas • Fokus & Presisi",
+        vibeText: "📘 Mode simulasi mandiri untuk memperdalam pemahaman materi dan ketajaman penalaran.",
+      };
+  }
+}
 
 export function generateStandaloneQuizHtml(data: GeneratedQuizData): string {
   const jsonPayload = JSON.stringify(data).replace(/</g, "\\u003c");
+  const theme = resolveQuizTheme(data.level, data.childName);
 
   return `<!DOCTYPE html>
 <html lang="id">
@@ -11,9 +140,9 @@ export function generateStandaloneQuizHtml(data: GeneratedQuizData): string {
   <title>Kuis ${escapeHtml(data.subject)} - ${escapeHtml(data.childName)}</title>
   <style>
     :root {
-      --primary: #6366f1;
-      --primary-hover: #4f46e5;
-      --primary-light: #e0e7ff;
+      --primary: ${theme.primary};
+      --primary-hover: ${theme.primaryHover};
+      --primary-light: ${theme.primaryLight};
       --success: #10b981;
       --success-light: #d1fae5;
       --danger: #ef4444;
@@ -24,7 +153,7 @@ export function generateStandaloneQuizHtml(data: GeneratedQuizData): string {
       --text: #1e293b;
       --text-muted: #64748b;
       --border: #e2e8f0;
-      --radius: 16px;
+      --radius: ${theme.cardRadius};
       --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.03);
     }
 
@@ -32,12 +161,12 @@ export function generateStandaloneQuizHtml(data: GeneratedQuizData): string {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      font-family: ${theme.fontFamily};
       -webkit-tap-highlight-color: transparent;
     }
 
     body {
-      background: linear-gradient(135deg, #eef2ff 0%, #f5f3ff 50%, #fef3c7 100%);
+      background: ${theme.bgGradient};
       color: var(--text);
       min-height: 100vh;
       display: flex;
@@ -85,10 +214,10 @@ export function generateStandaloneQuizHtml(data: GeneratedQuizData): string {
     /* Start Screen */
     .start-screen {
       text-align: center;
-      padding: 36px 16px;
+      padding: 32px 16px;
     }
     .avatar-icon {
-      font-size: 4rem;
+      font-size: 4.2rem;
       margin-bottom: 12px;
       display: inline-block;
       animation: bounce 2s infinite;
@@ -141,7 +270,7 @@ export function generateStandaloneQuizHtml(data: GeneratedQuizData): string {
     .btn-primary {
       background: var(--primary);
       color: white;
-      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     }
     .btn-primary:hover {
       background: var(--primary-hover);
@@ -174,7 +303,7 @@ export function generateStandaloneQuizHtml(data: GeneratedQuizData): string {
     }
     .progress-bar-fill {
       height: 100%;
-      background: linear-gradient(90deg, #6366f1, #a855f7);
+      background: var(--primary);
       transition: width 0.3s ease;
     }
 
@@ -222,7 +351,7 @@ export function generateStandaloneQuizHtml(data: GeneratedQuizData): string {
     }
     .option-card.selected {
       border-color: var(--primary);
-      background: #eef2ff;
+      background: var(--primary-light);
     }
     .option-key {
       width: 32px;
@@ -395,7 +524,7 @@ export function generateStandaloneQuizHtml(data: GeneratedQuizData): string {
     <div class="card" id="appCard">
       <!-- Layar Selamat Datang -->
       <div id="startScreen" class="start-screen">
-        <div class="avatar-icon">🎒</div>
+        <div class="avatar-icon">${theme.avatarIcon}</div>
         <div style="margin-bottom: 8px;">
           <span class="badge badge-primary">${escapeHtml(data.level)} • ${escapeHtml(data.grade)}</span>
           <span class="badge badge-warning" style="margin-left: 6px;">Tingkat: ${escapeHtml(data.difficulty)}</span>
@@ -425,18 +554,18 @@ export function generateStandaloneQuizHtml(data: GeneratedQuizData): string {
         </div>
 
         <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 20px;">
-          ✨ Soal dipilih secara acak dari bank soal. Setiap kali kamu ulangi kuis, soal yang keluar akan selalu baru dan menantang!
+          ${theme.vibeText}
         </p>
 
         <button class="btn btn-primary btn-block" onclick="startQuizSession()">
-          🚀 Mulai Kuis Sekarang
+          ${theme.startBtnText}
         </button>
 
-        <div style="margin-top: 20px; font-size: 0.78rem; color: #64748b; text-align: center; background: #f8fafc; padding: 8px 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+        <div style="margin-top: 20px; font-size: 0.78rem; color: #64748b; text-align: center; background: #f8fafc; padding: 10px 14px; border-radius: 8px; border: 1px solid #e2e8f0;">
           ☕ Suka dengan aplikasi ini? Dukung kami dengan klik link ini: 
-          <a href="https://saweria.co/ibnufm21" target="_blank" rel="noopener noreferrer" style="color: #4f46e5; text-decoration: underline; font-weight: 700;">👉 https://saweria.co/ibnufm21</a>
-          <span style="margin: 0 4px; color: #cbd5e1;">•</span>
-          <a href="https://instagram.com/ibnufm" target="_blank" rel="noopener noreferrer" style="color: #475569; text-decoration: underline; font-weight: 600;">📸 @ibnufm</a>
+          <a href="https://saweria.co/ibnufm21" target="_blank" rel="noopener noreferrer" style="color: var(--primary); text-decoration: underline; font-weight: 700;">👉 https://saweria.co/ibnufm21</a>
+          <span style="margin: 0 6px; color: #cbd5e1;">•</span>
+          <a href="https://instagram.com/ibnufm" target="_blank" rel="noopener noreferrer" style="color: #475569; text-decoration: underline; font-weight: 600;">📸 Instagram: @ibnufm</a>
         </div>
       </div>
 
@@ -531,9 +660,9 @@ export function generateStandaloneQuizHtml(data: GeneratedQuizData): string {
 
         <div class="no-print" style="margin-top: 24px; padding-top: 14px; border-top: 1px dashed var(--border); font-size: 0.78rem; color: #64748b; text-align: center; background: #f8fafc; padding: 10px 14px; border-radius: 8px;">
           ☕ Suka dengan aplikasi ini? Dukung kami dengan klik link ini: 
-          <a href="https://saweria.co/ibnufm21" target="_blank" rel="noopener noreferrer" style="color: #4f46e5; text-decoration: underline; font-weight: 700;">👉 https://saweria.co/ibnufm21</a>
-          <span style="margin: 0 4px; color: #cbd5e1;">•</span>
-          <a href="https://instagram.com/ibnufm" target="_blank" rel="noopener noreferrer" style="color: #475569; text-decoration: underline; font-weight: 600;">📸 @ibnufm</a>
+          <a href="https://saweria.co/ibnufm21" target="_blank" rel="noopener noreferrer" style="color: var(--primary); text-decoration: underline; font-weight: 700;">👉 https://saweria.co/ibnufm21</a>
+          <span style="margin: 0 6px; color: #cbd5e1;">•</span>
+          <a href="https://instagram.com/ibnufm" target="_blank" rel="noopener noreferrer" style="color: #475569; text-decoration: underline; font-weight: 600;">📸 Instagram: @ibnufm</a>
         </div>
       </div>
     </div>
