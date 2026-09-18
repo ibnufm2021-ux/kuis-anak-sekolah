@@ -431,6 +431,11 @@ export function generateStandaloneQuizHtml(data: GeneratedQuizData): string {
         <button class="btn btn-primary btn-block" onclick="startQuizSession()">
           🚀 Mulai Kuis Sekarang
         </button>
+
+        <div style="margin-top: 20px; font-size: 0.78rem; color: #64748b; text-align: center; background: #f8fafc; padding: 8px 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+          ☕ Suka kuis ini? Kamu bisa beri dukungan dengan <strong>klik link ini:</strong> 
+          <a href="https://saweria.co/ibnufm21" target="_blank" rel="noopener noreferrer" style="color: #4f46e5; text-decoration: underline; font-weight: 700;">👉 https://saweria.co/ibnufm21</a>
+        </div>
       </div>
 
       <!-- Layar Soal Kuis -->
@@ -520,6 +525,11 @@ export function generateStandaloneQuizHtml(data: GeneratedQuizData): string {
         <div id="reviewContainer" class="review-list" style="display: none;">
           <h3 style="margin-bottom: 16px; font-size: 1.15rem;">Pembahasan Lengkap</h3>
           <div id="reviewItems"></div>
+        </div>
+
+        <div class="no-print" style="margin-top: 24px; padding-top: 14px; border-top: 1px dashed var(--border); font-size: 0.78rem; color: #64748b; text-align: center; background: #f8fafc; padding: 10px 14px; border-radius: 8px;">
+          ☕ Suka dengan kuis ini? Kamu bisa beri dukungan pembuatnya dengan <strong>klik link ini:</strong> 
+          <a href="https://saweria.co/ibnufm21" target="_blank" rel="noopener noreferrer" style="color: #4f46e5; text-decoration: underline; font-weight: 700;">👉 https://saweria.co/ibnufm21</a>
         </div>
       </div>
     </div>

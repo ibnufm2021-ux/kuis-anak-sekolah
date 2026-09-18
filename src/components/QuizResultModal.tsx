@@ -151,11 +151,25 @@ export default function QuizResultModal({
         </ul>
       </div>
 
-      <div className="text-center pt-2 text-xs text-slate-400">
-        Didukung oleh model AI:{" "}
-        <span className="font-mono text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
-          {usedModel}
-        </span>
+      <div className="text-center pt-3 border-t border-slate-100 space-y-2">
+        <p className="text-xs text-slate-600">
+          Suka dengan aplikasi kuis ini? Kamu bisa memberi dukungan dengan <strong>klik link ini:</strong>{" "}
+          <a
+            href="https://saweria.co/ibnufm21"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-bold text-amber-800 hover:text-amber-950 underline decoration-2 decoration-amber-500 underline-offset-2 inline-flex items-center gap-0.5 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200"
+          >
+            👉 https://saweria.co/ibnufm21
+          </a>{" "}
+          ☕
+        </p>
+        <div className="text-xs text-slate-400">
+          Didukung oleh model AI:{" "}
+          <span className="font-mono text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
+            {usedModel}
+          </span>
+        </div>
       </div>
     </div>
   );

@@ -168,14 +168,30 @@ export default function Home() {
       )}
 
       {/* Footer */}
-      <footer className="mt-16 text-center text-xs text-slate-400 space-y-1">
-        <p>
-          Dibuat dengan ❤️ untuk kemudahan belajar anak sekolah di Indonesia.
-        </p>
-        <p>
-          Mendukung jenjang TK, SD, SMP, hingga SMA • Siap di-deploy langsung ke
-          Vercel.
-        </p>
+      <footer className="mt-16 text-center text-xs text-slate-500 space-y-2 pb-6">
+        <div className="inline-flex flex-wrap items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs shadow-sm">
+          <span>☕ Suka dengan aplikasi ini? Kamu bisa memberi dukungan dengan <strong>klik link ini:</strong></span>
+          <a
+            href="https://saweria.co/ibnufm21"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-bold text-amber-800 hover:text-amber-950 underline decoration-2 decoration-amber-500 underline-offset-4 transition-colors inline-flex items-center gap-1 bg-amber-100/80 px-2 py-0.5 rounded"
+          >
+            👉 https://saweria.co/ibnufm21
+          </a>
+        </div>
+        <div className="flex flex-wrap items-center justify-center gap-2 text-xs text-slate-400 pt-1">
+          <span>Dibuat dengan ❤️ untuk kemudahan belajar anak</span>
+          <span>•</span>
+          <a
+            href="https://instagram.com/ibnufm"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-slate-500 hover:text-indigo-600 font-semibold transition-colors inline-flex items-center gap-1 hover:underline"
+          >
+            📸 Instagram: @ibnufm
+          </a>
+        </div>
       </footer>
     </main>
   );
