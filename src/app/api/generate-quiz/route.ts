@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateQuizQuestions } from "@/lib/gemini";
 import { generateStandaloneQuizHtml } from "@/lib/html-template";
 import { EducationLevel, DifficultyLevel, GeneratedQuizData } from "@/lib/types";
+import { logQuizEventToSheet } from "@/lib/telemetry";
 
 export const maxDuration = 60; // Izinkan durasi serverless hingga 60 detik
 
@@ -9,6 +10,8 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
+    const userId = (body.userId || "anonim").trim();
+    const userGenCount = parseInt(body.userGenCount, 10) || 1;
     const childName = (body.childName || "").trim();
     const level = body.level as EducationLevel;
     const grade = (body.grade || "").trim();
@@ -74,6 +77,21 @@ export async function POST(req: NextRequest) {
     const safeChildName = childName.replace(/[^a-zA-Z0-9]/g, "_");
     const safeSubject = subject.replace(/[^a-zA-Z0-9]/g, "_");
     const filename = `Kuis_${safeSubject}_${safeChildName}.html`;
+
+    // Catat data ke Google Spreadsheet
+    logQuizEventToSheet({
+      userId,
+      userGenCount,
+      childName,
+      level,
+      grade,
+      subject,
+      topic,
+      difficulty,
+      questionCount,
+      usedModel,
+      action: "Buat Kuis",
+    });
 
     return NextResponse.json({
       success: true,

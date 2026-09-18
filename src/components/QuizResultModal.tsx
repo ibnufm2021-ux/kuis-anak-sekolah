@@ -12,6 +12,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { GeneratedQuizData } from "@/lib/types";
+import { trackClientAction } from "@/lib/client-tracking";
 
 interface QuizResultModalProps {
   quizData: GeneratedQuizData;
@@ -31,6 +32,18 @@ export default function QuizResultModal({
   onReset,
 }: QuizResultModalProps) {
   const handleDownload = () => {
+    trackClientAction({
+      childName: quizData.childName,
+      level: quizData.level,
+      grade: quizData.grade,
+      subject: quizData.subject,
+      topic: quizData.topic,
+      difficulty: quizData.difficulty,
+      questionCount: quizData.activeCount,
+      usedModel,
+      action: "Unduh HTML",
+    });
+
     const blob = new Blob([htmlContent], { type: "text/html;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -108,7 +121,20 @@ export default function QuizResultModal({
         <div className="flex gap-2.5">
           <button
             type="button"
-            onClick={onPreview}
+            onClick={() => {
+              trackClientAction({
+                childName: quizData.childName,
+                level: quizData.level,
+                grade: quizData.grade,
+                subject: quizData.subject,
+                topic: quizData.topic,
+                difficulty: quizData.difficulty,
+                questionCount: quizData.activeCount,
+                usedModel,
+                action: "Lihat Kuis",
+              });
+              onPreview();
+            }}
             className="flex-1 py-3 px-4 rounded-xl font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 active:scale-[0.99] transition-all flex items-center justify-center gap-2 text-sm"
           >
             <Eye className="w-4 h-4" />

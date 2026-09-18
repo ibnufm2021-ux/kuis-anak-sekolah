@@ -6,6 +6,7 @@ import GeneratingState from "@/components/GeneratingState";
 import QuizResultModal from "@/components/QuizResultModal";
 import LivePreviewModal from "@/components/LivePreviewModal";
 import { QuizGenerationRequest, GeneratedQuizData } from "@/lib/types";
+import { getOrCreateUserId, incrementAndGetUserGenCount } from "@/lib/client-tracking";
 import {
   Sparkles,
   CheckCircle2,
@@ -38,12 +39,19 @@ export default function Home() {
     setPendingRequest(formData);
 
     try {
+      const userId = getOrCreateUserId();
+      const userGenCount = incrementAndGetUserGenCount();
+
       const res = await fetch("/api/generate-quiz", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          userId,
+          userGenCount,
+        }),
       });
 
       const data = await res.json();
