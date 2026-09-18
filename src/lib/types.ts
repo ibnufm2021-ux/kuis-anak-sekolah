@@ -30,5 +30,6 @@ export interface GeneratedQuizData {
   activeCount: number; // n questions displayed per attempt
   poolCount: number; // total 4 x n questions
   questions: QuizQuestion[];
+  genderTone?: "boy" | "girl" | "neutral";
   generatedAt: string;
 }

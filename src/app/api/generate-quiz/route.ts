@@ -47,8 +47,8 @@ export async function POST(req: NextRequest) {
       questionCount = 20; // Sesuai kesepakatan: maks 20 soal
     }
 
-    // Panggil Gemini untuk generate 4 x n soal
-    const { questions, usedModel } = await generateQuizQuestions({
+    // Panggil Gemini untuk generate 4 x n soal dan deteksi tone nama
+    const { questions, usedModel, genderTone } = await generateQuizQuestions({
       childName,
       level,
       grade,
@@ -68,6 +68,7 @@ export async function POST(req: NextRequest) {
       activeCount: questionCount,
       poolCount: questions.length,
       questions,
+      genderTone,
       generatedAt: new Date().toISOString(),
     };
 

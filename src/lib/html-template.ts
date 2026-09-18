@@ -19,7 +19,7 @@ function detectGenderTone(name: string): GenderTone {
   const n = name.trim().toLowerCase();
 
   const boyKeywords = [
-    "budi", "muhammad", "mohammad", "ahmad", "farhan", "rayyan", "zayan",
+    "burhan", "budi", "muhammad", "mohammad", "ahmad", "farhan", "rayyan", "zayan",
     "kevin", "rizky", "rizki", "dimas", "bagus", "arya", "yusuf", "dani",
     "bayu", "pratama", "putra", "ilham", "fajar", "aditya", "adam", "reza",
     "aldy", "aldi", "fathir", "hafidz", "kenzie", "kenzo", "alif", "arkhan",
@@ -49,8 +49,14 @@ function detectGenderTone(name: string): GenderTone {
   return "neutral";
 }
 
-function resolveQuizTheme(level: EducationLevel, childName: string): QuizThemeConfig {
-  const gender = detectGenderTone(childName);
+function resolveQuizTheme(
+  level: EducationLevel,
+  childName: string,
+  explicitGender?: GenderTone
+): QuizThemeConfig {
+  const gender = explicitGender && explicitGender !== "neutral"
+    ? explicitGender
+    : detectGenderTone(childName);
 
   // Palet Warna: Standar, elegan, tidak norak / ekstrim
   let primary = "#6366f1"; // Indigo neutral
@@ -130,7 +136,7 @@ function resolveQuizTheme(level: EducationLevel, childName: string): QuizThemeCo
 
 export function generateStandaloneQuizHtml(data: GeneratedQuizData): string {
   const jsonPayload = JSON.stringify(data).replace(/</g, "\\u003c");
-  const theme = resolveQuizTheme(data.level, data.childName);
+  const theme = resolveQuizTheme(data.level, data.childName, data.genderTone);
 
   return `<!DOCTYPE html>
 <html lang="id">

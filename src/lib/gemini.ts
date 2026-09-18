@@ -82,7 +82,7 @@ async function callGeminiApi(
 
 export async function generateQuizQuestions(
   req: QuizGenerationRequest
-): Promise<{ questions: QuizQuestion[]; usedModel: string }> {
+): Promise<{ questions: QuizQuestion[]; usedModel: string; genderTone?: "boy" | "girl" | "neutral" }> {
   // Daftar API Key: Primary dan Fallback dari Environment Variables
   const primaryKey = process.env.GEMINI_API_KEY || "";
   const fallbackKey = process.env.GEMINI_API_KEY_FALLBACK || "";
@@ -104,9 +104,10 @@ export async function generateQuizQuestions(
   const difficultyGuide = difficultyDescriptions[req.difficulty] || "Tingkat sedang standar sekolah.";
 
   const systemInstruction = `Kamu adalah pembuat soal kuis pendidikan anak sekolah terpercaya di Indonesia.
-Kamu HANYA boleh merespons dalam format JSON Array murni berisi daftar pertanyaan kuis pilihan ganda.
+Kamu HANYA boleh merespons dalam format JSON murni.
 Bahasa yang digunakan: Bahasa Indonesia yang baku namun ramah, mendidik, dan sesuai usia siswa.
-PENTING: Buat tepat ${targetCount} butir soal pilihan ganda unik dan berkualitas (4 opsi tiap soal).`;
+PENTING: Buat tepat ${targetCount} butir soal pilihan ganda unik dan berkualitas (4 opsi tiap soal).
+Tugas tambahan: Analisis nama siswa "${req.childName}" dan tentukan childGenderTone: "boy" (laki-laki), "girl" (perempuan), atau "neutral" (netral/tidak tertebak).`;
 
   const prompt = `Buatkan tepat ${targetCount} butir soal pilihan ganda untuk:
 - Siswa: ${req.childName}
@@ -115,16 +116,19 @@ PENTING: Buat tepat ${targetCount} butir soal pilihan ganda unik dan berkualitas
 - Mata Pelajaran: ${subjectText} ${topicText}
 - Tingkat Kesulitan: "${req.difficulty}" (${difficultyGuide})
 
-Instruksi format keluaran (JSON Array murni):
-[
-  {
-    "id": 1,
-    "question": "Teks pertanyaan soal...",
-    "options": ["Opsi pilihan 1 tanpa huruf A/B/C/D", "Opsi pilihan 2", "Opsi pilihan 3", "Opsi pilihan 4"],
-    "correctAnswerIndex": 0,
-    "explanation": "Penjelasan ramah dan mendidik mengapa opsi ini benar..."
-  }
-]`;
+Instruksi format keluaran (JSON Object):
+{
+  "childGenderTone": "boy",
+  "questions": [
+    {
+      "id": 1,
+      "question": "Teks pertanyaan soal...",
+      "options": ["Opsi pilihan 1 tanpa huruf A/B/C/D", "Opsi pilihan 2", "Opsi pilihan 3", "Opsi pilihan 4"],
+      "correctAnswerIndex": 0,
+      "explanation": "Penjelasan ramah dan mendidik mengapa opsi ini benar..."
+    }
+  ]
+}`;
 
   let lastError: Error | null = null;
   let allKeysRateLimited = true;
@@ -147,12 +151,21 @@ Instruksi format keluaran (JSON Array murni):
         throw new Error(`Model ${TARGET_MODEL} mengembalikan format data JSON yang tidak valid.`);
       }
 
-      // Tangani kemungkinan format array langsung atau objek pembungkus { questions: [...] }
+      // Tangani kemungkinan format array langsung atau objek pembungkus { questions: [...], childGenderTone: "boy" }
+      let detectedGender: "boy" | "girl" | "neutral" = "neutral";
       let itemsArray: Array<Record<string, unknown>> = [];
+
       if (Array.isArray(parsedData)) {
         itemsArray = parsedData as Array<Record<string, unknown>>;
       } else if (parsedData && typeof parsedData === "object") {
         const obj = parsedData as Record<string, unknown>;
+        const g = String(obj.childGenderTone || obj.gender || obj.genderTone || "").toLowerCase();
+        if (g.includes("boy") || g.includes("laki") || g.includes("pria") || g.includes("male")) {
+          detectedGender = "boy";
+        } else if (g.includes("girl") || g.includes("perempuan") || g.includes("wanita") || g.includes("female")) {
+          detectedGender = "girl";
+        }
+
         for (const k of ["questions", "soal", "bank_soal", "items", "data", "quiz"]) {
           if (Array.isArray(obj[k])) {
             itemsArray = obj[k] as Array<Record<string, unknown>>;
@@ -218,6 +231,7 @@ Instruksi format keluaran (JSON Array murni):
       return {
         questions: validated,
         usedModel: TARGET_MODEL,
+        genderTone: detectedGender,
       };
     } catch (err: unknown) {
       const error = err instanceof Error ? err : new Error(String(err));
