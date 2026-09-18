@@ -178,7 +178,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="mt-16 text-center text-xs text-slate-500 space-y-2 pb-6">
         <div className="inline-flex flex-wrap items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs shadow-sm">
-          <span>☕ Suka dengan aplikasi ini? Kamu bisa memberi dukungan dengan <strong>klik link ini:</strong></span>
+          <span>☕ Suka dengan aplikasi ini? Dukung kami dengan klik link ini:</span>
           <a
             href="https://saweria.co/ibnufm21"
             target="_blank"
@@ -195,7 +195,7 @@ export default function Home() {
             href="https://instagram.com/ibnufm"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-slate-500 hover:text-indigo-600 font-semibold transition-colors inline-flex items-center gap-1 hover:underline"
+            className="text-slate-600 hover:text-pink-600 font-bold transition-colors inline-flex items-center gap-1 hover:underline"
           >
             📸 Instagram: @ibnufm
           </a>
