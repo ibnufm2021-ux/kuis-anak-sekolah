@@ -169,16 +169,22 @@ export async function generateQuizQuestions(
   const systemInstruction = `Kamu adalah pembuat soal kuis pendidikan anak sekolah terpercaya di Indonesia.
 Kamu HANYA boleh merespons dalam format JSON Object murni.
 Bahasa yang digunakan: Bahasa Indonesia yang baku namun ramah, mendidik, dan sesuai usia siswa.
-PENTING: Buat tepat ${targetCount} butir soal pilihan ganda unik dan berkualitas (4 opsi tiap soal).
-Penjelasan (explanation) WAJIB ringkas 1 kalimat agar padat dan jelas.
-Tugas tambahan: Analisis nama siswa "${req.childName}" dan tentukan childGenderTone: "boy" (laki-laki), "girl" (perempuan), atau "neutral" (netral/tidak tertebak).`;
+PENTING:
+1. Buat tepat ${targetCount} butir soal pilihan ganda unik, beragam, dan berkualitas (4 opsi tiap soal).
+2. WAJIB pastikan fakta materi, rumus, dan perhitungan matematika 100% tepat dan benar. Pastikan correctAnswerIndex selalu menunjuk ke opsi yang paling benar.
+3. Variasikan gaya soal agar anak tidak bosan: padukan pemahaman konsep dasar, soal cerita sehari-hari kontekstual anak, dan penalaran logika sebab-akibat sederhana.
+4. Penjelasan (explanation) WAJIB ringkas 1 kalimat agar padat, edukatif, dan jelas.
+5. Tugas tambahan: Analisis nama siswa "${req.childName}" dan tentukan childGenderTone: "boy" (laki-laki), "girl" (perempuan), atau "neutral" (netral/tidak tertebak).`;
 
-  const prompt = `Buatkan tepat ${targetCount} butir soal pilihan ganda untuk:
+  const randomBatchSeed = Math.floor(Math.random() * 100000);
+  const prompt = `Buatkan tepat ${targetCount} butir soal pilihan ganda (Batch Ref: #${randomBatchSeed}) untuk:
 - Siswa: ${req.childName}
 - Jenjang: ${req.level}
 - Kelas: ${req.grade}
 - Mata Pelajaran: ${subjectText} ${topicText}
 - Tingkat Kesulitan: "${req.difficulty}" (${difficultyGuide})
+
+Pastikan butir-butir soal memiliki sudut pandang studi kasus yang segar dan variatif, bukan hanya hafalan definisi klise.
 
 Instruksi format keluaran (JSON Object):
 {

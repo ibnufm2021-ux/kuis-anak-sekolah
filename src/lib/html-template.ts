@@ -667,10 +667,17 @@ export function generateStandaloneQuizHtml(data: GeneratedQuizData): string {
           </div>
         </div>
 
-        <div class="no-print" style="display: flex; flex-direction: column; gap: 10px; margin: 24px 0;">
-          <button class="btn btn-primary btn-block" onclick="restartQuizWithNewRandom()">
-            🔄 Ulangi Kuis (Acak Soal Baru dari Bank)
-          </button>
+        <div class="no-print" style="margin: 24px 0;">
+          <div id="resultActionButtons" style="display: flex; flex-direction: column; gap: 10px;">
+            <button class="btn btn-primary btn-block" onclick="startQuizSession('new')">
+              🔄 Lanjut Sesi Soal Baru dari Bank
+            </button>
+          </div>
+
+          <div id="poolStatusIndicator" style="font-size: 0.8rem; color: #64748b; margin-top: 10px; margin-bottom: 16px; text-align: center; background: #f1f5f9; padding: 8px 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+            🃏 Bank Soal: Mengacak soal baru tanpa duplikasi
+          </div>
+
           <div style="display: flex; gap: 10px;">
             <button class="btn btn-secondary" style="flex: 1;" onclick="toggleReviewSection()">
               📝 Lihat Pembahasan
@@ -707,6 +714,11 @@ export function generateStandaloneQuizHtml(data: GeneratedQuizData): string {
     let timerSeconds = 0;
     let timerInterval = null;
 
+    // Sistem Tumpukan Kartu (Exhaustion Deck) & Mode Remedial
+    let remainingPool = [];
+    let lastWrongQuestions = [];
+    let sessionRound = 0;
+
     // Algoritma Fisher-Yates untuk mengacak array
     function shuffleArray(array) {
       const copy = [...array];
@@ -717,18 +729,64 @@ export function generateStandaloneQuizHtml(data: GeneratedQuizData): string {
       return copy;
     }
 
-    // Mempersiapkan sesi kuis baru (mengambil n dari pool 4n dan mengacak opsi)
-    function prepareSessionQuestions() {
+    // Inisialisasi tumpukan kartu bank soal
+    function initPoolDeck() {
+      const fullPool = Array.isArray(quizData.questions) ? quizData.questions : [];
+      remainingPool = shuffleArray(fullPool);
+    }
+
+    // Mempersiapkan sesi kuis baru (tanpa pengembalian & remedial)
+    function prepareSessionQuestions(mode) {
+      const selectedMode = mode || 'new';
       const fullPool = Array.isArray(quizData.questions) ? quizData.questions : [];
       if (fullPool.length === 0) {
         console.error("Bank soal kosong atau tidak valid.");
         return [];
       }
-      const shuffledPool = shuffleArray(fullPool);
-      const targetCount = Math.min(Number(quizData.activeCount) || 5, shuffledPool.length);
-      const selected = shuffledPool.slice(0, targetCount);
 
-      // Acak urutan pilihan jawaban untuk setiap soal agar tidak dapat dihafal
+      if (!remainingPool || remainingPool.length === 0) {
+        initPoolDeck();
+      }
+
+      const targetCount = Math.min(Number(quizData.activeCount) || 5, fullPool.length);
+      let selected = [];
+
+      if (selectedMode === 'remedial' && lastWrongQuestions.length > 0) {
+        // Mode Remedial: ambil soal yang salah pada sesi sebelumnya
+        const wrongBatch = lastWrongQuestions.slice(0, targetCount);
+        selected = [...wrongBatch];
+
+        // Jika soal salah kurang dari targetCount, lengkapi dari sisa tumpukan kartu fresh
+        const deficit = targetCount - selected.length;
+        if (deficit > 0) {
+          if (remainingPool.length < deficit) {
+            initPoolDeck();
+          }
+          const extras = remainingPool.splice(0, deficit);
+          selected = selected.concat(extras);
+        }
+      } else {
+        // Mode Soal Baru: ambil dari tumpukan kartu yang 100% belum pernah keluar
+        if (remainingPool.length < targetCount) {
+          // Jika sisa kartu di tumpukan kurang dari targetCount,
+          // ambil sisa yang ada, lalu kocok ulang deck baru untuk kekurangannya
+          const remainingBefore = [...remainingPool];
+          initPoolDeck();
+          const deficit = targetCount - remainingBefore.length;
+          // Filter agar tumpukan baru tidak langsung mengulang soal yang baru saja di remainingBefore
+          const freshDeck = remainingPool.filter(q => !remainingBefore.some(rb => rb.id === q.id));
+          const additions = freshDeck.slice(0, deficit);
+          selected = remainingBefore.concat(additions);
+          remainingPool = freshDeck.slice(deficit);
+        } else {
+          // Ambil targetCount soal dari tumpukan (kartu ditarik tanpa pengembalian)
+          selected = remainingPool.splice(0, targetCount);
+        }
+      }
+
+      sessionRound++;
+
+      // Acak urutan pilihan jawaban (A/B/C/D) untuk setiap soal agar tidak dapat dihafal posisinya
       return selected.map((q, idx) => {
         const opts = (Array.isArray(q.options) && q.options.length > 0)
           ? q.options.slice(0, 4)
@@ -760,9 +818,10 @@ export function generateStandaloneQuizHtml(data: GeneratedQuizData): string {
       });
     }
 
-    function startQuizSession() {
+    function startQuizSession(mode) {
       try {
-        activeQuestions = prepareSessionQuestions();
+        const selectedMode = mode || 'new';
+        activeQuestions = prepareSessionQuestions(selectedMode);
         if (!activeQuestions || activeQuestions.length === 0) {
           alert("Soal kuis belum dapat dimuat. Pastikan file ini dibuka dengan Google Chrome atau browser web.");
           return;
@@ -909,11 +968,14 @@ export function generateStandaloneQuizHtml(data: GeneratedQuizData): string {
 
       clearInterval(timerInterval);
 
-      // Hitung skor
+      // Hitung skor & kumpulkan soal yang salah
       let correct = 0;
+      lastWrongQuestions = [];
       activeQuestions.forEach((q, idx) => {
         if (userAnswers[idx] === q.displayCorrectIndex) {
           correct++;
+        } else {
+          lastWrongQuestions.push(q);
         }
       });
 
@@ -956,6 +1018,38 @@ export function generateStandaloneQuizHtml(data: GeneratedQuizData): string {
         emojiElem.innerText = '💪';
         titleElem.innerText = 'Tetap Semangat, ' + quizData.childName + '!';
         subtitleElem.innerText = 'Jangan menyerah ya! Kamu bisa ulangi kuis ini untuk belajar lagi.';
+      }
+
+      // Render Tombol Pilihan Sesi Berikutnya (Remedial vs Soal Baru)
+      const actionButtons = document.getElementById('resultActionButtons');
+      if (actionButtons) {
+        let btnHtml = '';
+        const wrongCount = lastWrongQuestions.length;
+        const freshLeft = remainingPool ? remainingPool.length : 0;
+
+        if (wrongCount > 0) {
+          btnHtml += \`
+            <button class="btn btn-block" style="background: #f59e0b; color: white;" onclick="startQuizSession('remedial')">
+              💪 Ulangi \${wrongCount} Soal yang Tadi Salah (Mode Remedial)
+            </button>
+          \`;
+        }
+
+        const freshLabel = freshLeft > 0 ? '(Sisa ' + freshLeft + ' Soal Baru)' : '(Kocok Ulang Seluruh Bank)';
+        btnHtml += \`
+          <button class="btn btn-primary btn-block" onclick="startQuizSession('new')">
+            🔄 Lanjut Sesi Soal Baru \${freshLabel}
+          </button>
+        \`;
+
+        actionButtons.innerHTML = btnHtml;
+      }
+
+      const poolStatus = document.getElementById('poolStatusIndicator');
+      if (poolStatus) {
+        const totalPool = quizData.poolCount || (quizData.questions && quizData.questions.length) || 0;
+        const freshLeft = remainingPool ? remainingPool.length : 0;
+        poolStatus.innerText = '🃏 Bank Soal: ' + totalPool + ' total soal • Sisa ' + freshLeft + ' soal baru yang belum pernah keluar';
       }
 
       // Render review
@@ -1012,7 +1106,7 @@ export function generateStandaloneQuizHtml(data: GeneratedQuizData): string {
     }
 
     function restartQuizWithNewRandom() {
-      startQuizSession();
+      startQuizSession('new');
     }
 
     function escapeHtml(text) {
@@ -1038,7 +1132,7 @@ export function generateStandaloneQuizHtml(data: GeneratedQuizData): string {
     document.addEventListener('DOMContentLoaded', () => {
       const btn = document.getElementById('startQuizBtn');
       if (btn) {
-        btn.addEventListener('click', startQuizSession);
+        btn.addEventListener('click', () => startQuizSession('new'));
       }
     });
   </script>
