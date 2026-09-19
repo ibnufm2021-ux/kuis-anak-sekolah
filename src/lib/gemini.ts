@@ -166,15 +166,92 @@ export async function generateQuizQuestions(
 
   const difficultyGuide = difficultyDescriptions[req.difficulty] || "Tingkat sedang standar sekolah.";
 
+  // Batasan Disiplin Ilmu Kurikulum Indonesia (Mencegah materi silang seperti Pancasila masuk ke IPS)
+  const getSubjectBoundaryGuide = (subject: string): string => {
+    const s = subject.toLowerCase();
+
+    if (
+      s.includes("ips") ||
+      s.includes("sosial") ||
+      s.includes("geografi") ||
+      s.includes("sejarah") ||
+      s.includes("sosiologi") ||
+      s.includes("ekonomi")
+    ) {
+      return `KORIDOR DISIPLIN ILMU WAJIB (SANGAT KETAT):
+- Mata pelajaran: ILMU PENGETAHUAN SOSIAL (IPS).
+- Lingkup materi HARUS 100% murni tentang: Geografi (kenampakan alam, iklim, peta, letak wilayah), Sejarah (tokoh pahlawan, masa kerajaan, kemerdekaan), Kegiatan Ekonomi (produksi, konsumsi, distribusi, pasar, uang), dan Interaksi Sosial Masyarakat.
+- DILARANG KERAS (STRICT PROHIBITION): Dilarang memasukkan butir-butir sila Pancasila, lambang Garuda/sila, pasal UUD 1945, lembaga kenegaraan, atau materi PPKn. Materi tersebut milik mata pelajaran PPKn, BUKAN IPS!`;
+    }
+
+    if (
+      s.includes("pancasila") ||
+      s.includes("ppkn") ||
+      s.includes("pkn") ||
+      s.includes("kewarganegaraan")
+    ) {
+      return `KORIDOR DISIPLIN ILMU WAJIB (SANGAT KETAT):
+- Mata pelajaran: PENDIDIKAN PANCASILA / PPKn.
+- Lingkup materi HARUS tentang: Nilai-nilai sila Pancasila, lambang Garuda, UUD 1945, hak & kewajiban warga negara, norma hukum, toleransi, dan persatuan kesatuan.
+- DILARANG mencampurkan materi geografi teknis, rumus ekonomi, atau sains alam.`;
+    }
+
+    if (
+      s.includes("ipa") ||
+      s.includes("alam") ||
+      s.includes("sains") ||
+      s.includes("biologi") ||
+      s.includes("fisika") ||
+      s.includes("kimia")
+    ) {
+      return `KORIDOR DISIPLIN ILMU WAJIB (SANGAT KETAT):
+- Mata pelajaran: ILMU PENGETAHUAN ALAM (IPA) / Sains.
+- Lingkup materi HARUS tentang: Makhluk hidup, anatomi, tumbuhan, hewan, ekosistem, sifat zat/benda, gaya, energi, cahaya, dan tata surya.
+- DILARANG mencampurkan materi ilmu sosial kemasyarakatan, politik kenegaraan, atau tata bahasa.`;
+    }
+
+    if (
+      s.includes("matematika") ||
+      s.includes("berhitung") ||
+      s.includes("angka")
+    ) {
+      return `KORIDOR DISIPLIN ILMU WAJIB (SANGAT KETAT):
+- Mata pelajaran: MATEMATIKA.
+- Lingkup materi HARUS tentang: Operasi hitung, logika angka, pecahan, geometri/bangun datar-ruang, pengukuran, atau statistika sederhana.
+- WAJIB verifikasi ganda: Perhitungan matematika dan kunci jawaban harus 100% presisi dan terbukti benar.`;
+    }
+
+    if (s.includes("bahasa indonesia")) {
+      return `KORIDOR DISIPLIN ILMU WAJIB:
+- Mata pelajaran: BAHASA INDONESIA.
+- Lingkup materi HARUS tentang: Pemahaman bacaan, gagasan pokok, kosakata baku, ejaan (EYD), tanda baca, puisi, pantun, atau struktur kalimat.`;
+    }
+
+    if (s.includes("inggris") || s.includes("english")) {
+      return `KORIDOR DISIPLIN ILMU WAJIB:
+- Mata pelajaran: BAHASA INGGRIS.
+- Soal dan 4 opsi pilihan ganda WAJIB dalam Bahasa Inggris yang komunikatif sesuai usia siswa. Penjelasan (explanation) dalam Bahasa Indonesia.`;
+    }
+
+    return `KORIDOR DISIPLIN ILMU WAJIB:
+- Pastikan semua butir soal 100% relevan secara spesifik hanya pada mata pelajaran "${subject}" dan tidak melenceng ke mata pelajaran lain.`;
+  };
+
+  const subjectBoundaryGuide = getSubjectBoundaryGuide(subjectText);
+
   const systemInstruction = `Kamu adalah pembuat soal kuis pendidikan anak sekolah terpercaya di Indonesia.
 Kamu HANYA boleh merespons dalam format JSON Object murni.
 Bahasa yang digunakan: Bahasa Indonesia yang baku namun ramah, mendidik, dan sesuai usia siswa.
-PENTING:
+
+ATURAN KUALITAS & IN-PROMPT QUALITY CONTROL (QC):
 1. Buat tepat ${targetCount} butir soal pilihan ganda unik, beragam, dan berkualitas (4 opsi tiap soal).
-2. WAJIB pastikan fakta materi, rumus, dan perhitungan matematika 100% tepat dan benar. Pastikan correctAnswerIndex selalu menunjuk ke opsi yang paling benar.
-3. Variasikan gaya soal agar anak tidak bosan: padukan pemahaman konsep dasar, soal cerita sehari-hari kontekstual anak, dan penalaran logika sebab-akibat sederhana.
-4. Penjelasan (explanation) WAJIB ringkas 1 kalimat agar padat, edukatif, dan jelas.
-5. Tugas tambahan: Analisis nama siswa "${req.childName}" dan tentukan childGenderTone: "boy" (laki-laki), "girl" (perempuan), atau "neutral" (netral/tidak tertebak).`;
+2. TERTIB KORIDOR MATA PELAJARAN (QC KETAT):
+${subjectBoundaryGuide}
+3. AKURASI FAKTA & KUNCI JAWABAN 100%: Periksa ulang setiap kunci jawaban. Pastikan correctAnswerIndex benar-benar menunjuk ke opsi yang sah dan paling tepat.
+4. VARIASI GAYA SOAL: Padukan pemahaman konsep dasar, soal cerita sehari-hari kontekstual anak, dan penalaran logika sederhana agar tidak monoton.
+5. PENJELASAN RINGKAS: explanation WAJIB 1 kalimat padat, edukatif, dan jelas.
+6. VERIFIKASI DIRI SEBELUM MENGIRIM JSON: Lakukan self-audit; jika ada butir soal yang melenceng dari koridor mapel di atas (misal soal Pancasila pada kuis IPS), GANTI SEKETIKA dengan soal yang sesuai koridor sebelum menghasilkan JSON.
+7. Analisis nama siswa "${req.childName}" dan tentukan childGenderTone: "boy" (laki-laki), "girl" (perempuan), atau "neutral" (netral/tidak tertebak).`;
 
   const randomBatchSeed = Math.floor(Math.random() * 100000);
   const prompt = `Buatkan tepat ${targetCount} butir soal pilihan ganda (Batch Ref: #${randomBatchSeed}) untuk:
@@ -184,7 +261,8 @@ PENTING:
 - Mata Pelajaran: ${subjectText} ${topicText}
 - Tingkat Kesulitan: "${req.difficulty}" (${difficultyGuide})
 
-Pastikan butir-butir soal memiliki sudut pandang studi kasus yang segar dan variatif, bukan hanya hafalan definisi klise.
+PENTING:
+Ikuti koridor mata pelajaran di atas secara disiplin. Pastikan seluruh soal murni menguji materi "${subjectText}" dan bebas dari materi mata pelajaran lain.
 
 Instruksi format keluaran (JSON Object):
 {
