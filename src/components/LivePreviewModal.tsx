@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { X, Smartphone, Tablet, Monitor, RotateCcw } from "lucide-react";
+import { X, Smartphone, Tablet, Monitor, RotateCcw, ExternalLink } from "lucide-react";
 
 interface LivePreviewModalProps {
   htmlContent: string;
@@ -16,6 +16,13 @@ export default function LivePreviewModal({
 }: LivePreviewModalProps) {
   const [deviceMode, setDeviceMode] = useState<DeviceMode>("mobile");
   const [iframeKey, setIframeKey] = useState(0);
+
+  const handleOpenNewTab = () => {
+    const blob = new Blob([htmlContent], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    window.open(url, "_blank");
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  };
 
   const getContainerWidth = () => {
     switch (deviceMode) {
@@ -85,6 +92,15 @@ export default function LivePreviewModal({
         <div className="flex items-center gap-2">
           <button
             type="button"
+            onClick={handleOpenNewTab}
+            className="px-2.5 py-1 text-xs text-indigo-300 hover:text-white bg-indigo-900/60 hover:bg-indigo-800 rounded-lg transition-colors flex items-center gap-1.5 font-medium border border-indigo-700/50"
+            title="Buka Layar Penuh di Tab Baru Browser"
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Layar Penuh</span>
+          </button>
+          <button
+            type="button"
             onClick={() => setIframeKey((k) => k + 1)}
             className="p-1.5 text-slate-400 hover:text-white rounded hover:bg-slate-700 transition-colors"
             title="Reload Frame"
@@ -112,7 +128,7 @@ export default function LivePreviewModal({
             srcDoc={htmlContent}
             title="Preview Kuis"
             className="w-full h-full border-0"
-            sandbox="allow-scripts allow-modals"
+            sandbox="allow-scripts allow-modals allow-same-origin"
           />
         </div>
       </div>

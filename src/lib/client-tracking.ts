@@ -33,7 +33,7 @@ export function trackClientAction(data: {
   difficulty: string;
   questionCount: number;
   usedModel?: string;
-  action: "Unduh HTML" | "Lihat Kuis";
+  action: "Unduh HTML" | "Lihat Kuis" | "Buka Tab Baru";
 }): void {
   if (typeof window === "undefined") return;
   try {

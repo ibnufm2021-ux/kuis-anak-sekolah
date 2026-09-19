@@ -9,7 +9,7 @@ export interface TelemetryPayload {
   difficulty: string;
   questionCount: number;
   usedModel?: string;
-  action: "Buat Kuis" | "Unduh HTML" | "Lihat Kuis";
+  action: "Buat Kuis" | "Unduh HTML" | "Lihat Kuis" | "Buka Tab Baru";
 }
 
 export async function logQuizEventToSheet(payload: TelemetryPayload): Promise<void> {

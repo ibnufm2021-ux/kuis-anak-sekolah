@@ -135,14 +135,18 @@ function resolveQuizTheme(
 }
 
 export function generateStandaloneQuizHtml(data: GeneratedQuizData): string {
-  const jsonPayload = JSON.stringify(data).replace(/</g, "\\u003c");
+  const jsonPayload = JSON.stringify(data)
+    .replace(/</g, "\\u003c")
+    .replace(/>/g, "\\u003e")
+    .replace(/\u2028/g, "\\u2028")
+    .replace(/\u2029/g, "\\u2029");
   const theme = resolveQuizTheme(data.level, data.childName, data.genderTone);
 
   return `<!DOCTYPE html>
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Kuis ${escapeHtml(data.subject)} - ${escapeHtml(data.childName)}</title>
   <style>
     :root {
@@ -341,7 +345,7 @@ export function generateStandaloneQuizHtml(data: GeneratedQuizData): string {
     }
     .option-card {
       display: flex;
-      align-items: center;
+      align-items: flex-start;
       gap: 14px;
       padding: 14px 18px;
       background: #ffffff;
@@ -350,10 +354,14 @@ export function generateStandaloneQuizHtml(data: GeneratedQuizData): string {
       cursor: pointer;
       transition: all 0.15s ease;
       user-select: none;
+      touch-action: manipulation;
     }
     .option-card:hover {
       border-color: #cbd5e1;
       background: #f8fafc;
+    }
+    .option-card:active {
+      transform: scale(0.98);
     }
     .option-card.selected {
       border-color: var(--primary);
@@ -371,6 +379,7 @@ export function generateStandaloneQuizHtml(data: GeneratedQuizData): string {
       background: #f1f5f9;
       color: #475569;
       flex-shrink: 0;
+      margin-top: 1px;
       transition: all 0.15s ease;
     }
     .option-card.selected .option-key {
@@ -378,10 +387,13 @@ export function generateStandaloneQuizHtml(data: GeneratedQuizData): string {
       color: white;
     }
     .option-label {
+      flex: 1;
+      min-width: 0;
       font-size: 1rem;
-      line-height: 1.4;
+      line-height: 1.45;
       font-weight: 500;
       color: var(--text);
+      word-break: break-word;
     }
 
     /* Bottom Navigation */
@@ -518,9 +530,14 @@ export function generateStandaloneQuizHtml(data: GeneratedQuizData): string {
     }
 
     @media (max-width: 480px) {
-      .card { padding: 16px; }
-      .meta-grid { grid-template-columns: 1fr; }
+      body { padding: 10px 8px; }
+      .card { padding: 18px 14px; border-radius: 14px; }
+      .meta-grid { grid-template-columns: 1fr; gap: 8px; }
+      .meta-item { padding: 10px 12px; }
       .question-text { font-size: 1.05rem; }
+      .btn { padding: 12px 18px; font-size: 0.95rem; }
+      .avatar-icon { font-size: 3.2rem; margin-bottom: 8px; }
+      h1 { font-size: 1.35rem !important; }
     }
   </style>
 </head>
@@ -563,7 +580,13 @@ export function generateStandaloneQuizHtml(data: GeneratedQuizData): string {
           ${theme.vibeText}
         </p>
 
-        <button class="btn btn-primary btn-block" onclick="startQuizSession()">
+        <noscript>
+          <div style="background: #fee2e2; color: #991b1b; padding: 12px 16px; border-radius: 10px; margin-bottom: 16px; font-weight: bold; font-size: 0.88rem; text-align: center; border: 1px solid #fca5a5;">
+            ⚠️ Penampil dokumen HP ini mematikan JavaScript. Mohon buka file .html ini menggunakan aplikasi <strong>Google Chrome</strong> atau <strong>Safari</strong> agar tombol kuis dapat diklik!
+          </div>
+        </noscript>
+
+        <button id="startQuizBtn" class="btn btn-primary btn-block" onclick="startQuizSession()" type="button">
           ${theme.startBtnText}
         </button>
 
@@ -696,18 +719,40 @@ export function generateStandaloneQuizHtml(data: GeneratedQuizData): string {
 
     // Mempersiapkan sesi kuis baru (mengambil n dari pool 4n dan mengacak opsi)
     function prepareSessionQuestions() {
-      const fullPool = quizData.questions || [];
+      const fullPool = Array.isArray(quizData.questions) ? quizData.questions : [];
+      if (fullPool.length === 0) {
+        console.error("Bank soal kosong atau tidak valid.");
+        return [];
+      }
       const shuffledPool = shuffleArray(fullPool);
-      const selected = shuffledPool.slice(0, Math.min(quizData.activeCount, fullPool.length));
+      const targetCount = Math.min(Number(quizData.activeCount) || 5, shuffledPool.length);
+      const selected = shuffledPool.slice(0, targetCount);
 
       // Acak urutan pilihan jawaban untuk setiap soal agar tidak dapat dihafal
       return selected.map((q, idx) => {
-        const originalCorrectText = q.options[q.correctAnswerIndex];
-        const shuffledOptions = shuffleArray(q.options);
-        const newCorrectIndex = shuffledOptions.indexOf(originalCorrectText);
+        const opts = (Array.isArray(q.options) && q.options.length > 0)
+          ? q.options.slice(0, 4)
+          : ["Opsi A", "Opsi B", "Opsi C", "Opsi D"];
+
+        let cIdx = 0;
+        if (typeof q.correctAnswerIndex === "number" && q.correctAnswerIndex >= 0 && q.correctAnswerIndex < opts.length) {
+          cIdx = q.correctAnswerIndex;
+        } else {
+          const parsed = parseInt(q.correctAnswerIndex, 10);
+          if (!isNaN(parsed) && parsed >= 0 && parsed < opts.length) {
+            cIdx = parsed;
+          }
+        }
+
+        const originalCorrectText = opts[cIdx];
+        const shuffledOptions = shuffleArray(opts);
+        let newCorrectIndex = shuffledOptions.indexOf(originalCorrectText);
+        if (newCorrectIndex === -1) newCorrectIndex = 0;
 
         return {
-          ...q,
+          id: q.id || (idx + 1),
+          question: q.question || ("Soal nomor " + (idx + 1)),
+          explanation: q.explanation || "Jawaban sudah diverifikasi.",
           sessionIndex: idx,
           displayOptions: shuffledOptions,
           displayCorrectIndex: newCorrectIndex,
@@ -716,26 +761,41 @@ export function generateStandaloneQuizHtml(data: GeneratedQuizData): string {
     }
 
     function startQuizSession() {
-      activeQuestions = prepareSessionQuestions();
-      currentQuestionIndex = 0;
-      userAnswers = {};
-      timerSeconds = 0;
+      try {
+        activeQuestions = prepareSessionQuestions();
+        if (!activeQuestions || activeQuestions.length === 0) {
+          alert("Soal kuis belum dapat dimuat. Pastikan file ini dibuka dengan Google Chrome atau browser web.");
+          return;
+        }
+        currentQuestionIndex = 0;
+        userAnswers = {};
+        timerSeconds = 0;
 
-      document.getElementById('startScreen').style.display = 'none';
-      document.getElementById('resultScreen').style.display = 'none';
-      document.getElementById('quizScreen').style.display = 'block';
+        const startScreen = document.getElementById('startScreen');
+        const resultScreen = document.getElementById('resultScreen');
+        const quizScreen = document.getElementById('quizScreen');
 
-      // Start timer
-      clearInterval(timerInterval);
-      timerInterval = setInterval(() => {
-        timerSeconds++;
-        const mins = String(Math.floor(timerSeconds / 60)).padStart(2, '0');
-        const secs = String(timerSeconds % 60).padStart(2, '0');
-        document.getElementById('timerDisplay').innerText = '⏱️ ' + mins + ':' + secs;
-      }, 1000);
+        if (startScreen) startScreen.style.display = 'none';
+        if (resultScreen) resultScreen.style.display = 'none';
+        if (quizScreen) quizScreen.style.display = 'block';
 
-      renderDots();
-      renderCurrentQuestion();
+        // Start timer
+        if (timerInterval) clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+          timerSeconds++;
+          const mins = String(Math.floor(timerSeconds / 60)).padStart(2, '0');
+          const secs = String(timerSeconds % 60).padStart(2, '0');
+          const timerEl = document.getElementById('timerDisplay');
+          if (timerEl) timerEl.innerText = '⏱️ ' + mins + ':' + secs;
+        }, 1000);
+
+        renderDots();
+        renderCurrentQuestion();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } catch (err) {
+        console.error("Gagal memulai kuis:", err);
+        alert("Terjadi kendala saat memulai kuis: " + (err && err.message ? err.message : err));
+      }
     }
 
     function renderDots() {
@@ -964,6 +1024,23 @@ export function generateStandaloneQuizHtml(data: GeneratedQuizData): string {
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
     }
+
+    // Daftarkan fungsi ke window untuk aksesibilitas global di browser apapun
+    window.startQuizSession = startQuizSession;
+    window.navigateQuestion = navigateQuestion;
+    window.jumpToQuestion = jumpToQuestion;
+    window.submitQuiz = submitQuiz;
+    window.selectOption = selectOption;
+    window.restartQuizWithNewRandom = restartQuizWithNewRandom;
+    window.toggleReviewSection = toggleReviewSection;
+
+    // Pastikan event listener terpasang saat DOM siap
+    document.addEventListener('DOMContentLoaded', () => {
+      const btn = document.getElementById('startQuizBtn');
+      if (btn) {
+        btn.addEventListener('click', startQuizSession);
+      }
+    });
   </script>
 </body>
 </html>`;
