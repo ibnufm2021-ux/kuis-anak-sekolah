@@ -365,8 +365,7 @@ export default function QuizForm({ onSubmit, isLoading }: QuizFormProps) {
         <div className="mt-3 p-2.5 rounded-lg bg-indigo-50/80 border border-indigo-200/50 flex items-center gap-2.5 text-xs text-indigo-900 font-medium">
           <Sparkles className="w-4 h-4 text-indigo-600 flex-shrink-0" />
           <span>
-            AI otomatis menyiapkan <strong>{questionCount * 4} soal</strong> di
-            dalam file .html, sehingga tiap kali diulang soalnya selalu baru!
+            AI otomatis menyiapkan <strong>bank soal acak berlipat</strong> di dalam file .html, sehingga tiap kali diulang soalnya selalu baru!
           </span>
         </div>
       </div>

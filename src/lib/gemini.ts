@@ -7,6 +7,7 @@ interface GeminiResponse {
         text?: string;
       }>;
     };
+    finishReason?: string;
   }>;
   error?: {
     code: number;
@@ -28,6 +29,64 @@ function isRateLimitError(errMsg: string): boolean {
     lower.includes("too many requests") ||
     lower.includes("limit")
   );
+}
+
+// Menghitung jumlah bank soal yang proporsional agar tidak melebihi output token limit
+function computeTargetPoolCount(n: number): number {
+  if (n <= 5) return 20; // 4x (20 soal)
+  if (n <= 10) return 30; // 3x (30 soal)
+  if (n <= 15) return 35; // 2.3x (35 soal)
+  return 40; // 2x (40 soal) -> Aman dari batas 8192 token & cepat di Vercel
+}
+
+// Parser JSON cerdas yang mampu memperbaiki respon terpotong (truncated)
+function parseAndRepairJson(raw: string): Record<string, unknown> {
+  let cleaned = raw
+    .replace(/```json/gi, "")
+    .replace(/```/g, "")
+    .trim();
+
+  // Ambil teks dari '{' pertama hingga '}' terakhir
+  const firstBrace = cleaned.indexOf("{");
+  const lastBrace = cleaned.lastIndexOf("}");
+  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+    cleaned = cleaned.substring(firstBrace, lastBrace + 1);
+  }
+
+  // Coba parse normal terlebih dahulu
+  try {
+    const parsed = JSON.parse(cleaned);
+    if (typeof parsed === "object" && parsed !== null) {
+      return parsed as Record<string, unknown>;
+    }
+  } catch {
+    // Lanjut ke perbaikan otomatis
+  }
+
+  // Jika terpotong di tengah jalan (MAX_TOKENS), potong mundur ke objek soal terakhir yang utuh '}'
+  const lastObjEnd = cleaned.lastIndexOf("}");
+  if (lastObjEnd !== -1) {
+    const candidates = [
+      cleaned.substring(0, lastObjEnd + 1) + "\n  ]\n}",
+      cleaned.substring(0, lastObjEnd + 1) + "\n}",
+      cleaned.substring(0, lastObjEnd + 1) + "\n]",
+      cleaned.substring(0, lastObjEnd + 1),
+    ];
+
+    for (const cand of candidates) {
+      try {
+        const repaired = JSON.parse(cand);
+        if (typeof repaired === "object" && repaired !== null) {
+          console.warn("Berhasil mereparasi data JSON yang terpotong.");
+          return repaired as Record<string, unknown>;
+        }
+      } catch {
+        // Coba kandidat berikutnya
+      }
+    }
+  }
+
+  throw new Error("Model AI mengembalikan format data JSON yang tidak valid.");
 }
 
 async function callGeminiApi(
@@ -82,14 +141,18 @@ async function callGeminiApi(
 
 export async function generateQuizQuestions(
   req: QuizGenerationRequest
-): Promise<{ questions: QuizQuestion[]; usedModel: string; genderTone?: "boy" | "girl" | "neutral" }> {
+): Promise<{
+  questions: QuizQuestion[];
+  usedModel: string;
+  genderTone?: "boy" | "girl" | "neutral";
+}> {
   // Daftar API Key: Primary dan Fallback dari Environment Variables
   const primaryKey = process.env.GEMINI_API_KEY || "";
   const fallbackKey = process.env.GEMINI_API_KEY_FALLBACK || "";
 
   const apiKeys = [primaryKey, fallbackKey].filter(Boolean);
 
-  const targetCount = req.questionCount * 4; // 4 x n pool
+  const targetCount = computeTargetPoolCount(req.questionCount);
   const subjectText = req.subject?.trim() || "Tematik & Pengetahuan Umum";
   const topicText = req.topic?.trim() ? `dengan topik spesifik: "${req.topic.trim()}"` : "";
 
@@ -104,9 +167,10 @@ export async function generateQuizQuestions(
   const difficultyGuide = difficultyDescriptions[req.difficulty] || "Tingkat sedang standar sekolah.";
 
   const systemInstruction = `Kamu adalah pembuat soal kuis pendidikan anak sekolah terpercaya di Indonesia.
-Kamu HANYA boleh merespons dalam format JSON murni.
+Kamu HANYA boleh merespons dalam format JSON Object murni.
 Bahasa yang digunakan: Bahasa Indonesia yang baku namun ramah, mendidik, dan sesuai usia siswa.
 PENTING: Buat tepat ${targetCount} butir soal pilihan ganda unik dan berkualitas (4 opsi tiap soal).
+Penjelasan (explanation) WAJIB ringkas 1 kalimat agar padat dan jelas.
 Tugas tambahan: Analisis nama siswa "${req.childName}" dan tentukan childGenderTone: "boy" (laki-laki), "girl" (perempuan), atau "neutral" (netral/tidak tertebak).`;
 
   const prompt = `Buatkan tepat ${targetCount} butir soal pilihan ganda untuk:
@@ -125,7 +189,7 @@ Instruksi format keluaran (JSON Object):
       "question": "Teks pertanyaan soal...",
       "options": ["Opsi pilihan 1 tanpa huruf A/B/C/D", "Opsi pilihan 2", "Opsi pilihan 3", "Opsi pilihan 4"],
       "correctAnswerIndex": 0,
-      "explanation": "Penjelasan ramah dan mendidik mengapa opsi ini benar..."
+      "explanation": "1 kalimat ringkas penjelasan mengapa opsi ini benar."
     }
   ]
 }`;
@@ -138,44 +202,35 @@ Instruksi format keluaran (JSON Object):
     try {
       const rawResponse = await callGeminiApi(key, prompt, systemInstruction);
 
-      // Bersihkan markdown formatting jika ada
-      const cleaned = rawResponse
-        .replace(/```json/gi, "")
-        .replace(/```/g, "")
-        .trim();
+      // Parse dan perbaiki JSON jika terpotong
+      const parsedObj = parseAndRepairJson(rawResponse);
 
-      let parsedData: unknown;
-      try {
-        parsedData = JSON.parse(cleaned);
-      } catch {
-        throw new Error(`Model ${TARGET_MODEL} mengembalikan format data JSON yang tidak valid.`);
+      // Tangani gender tone dari AI
+      let detectedGender: "boy" | "girl" | "neutral" = "neutral";
+      const g = String(
+        parsedObj.childGenderTone || parsedObj.gender || parsedObj.genderTone || ""
+      ).toLowerCase();
+      if (g.includes("boy") || g.includes("laki") || g.includes("pria") || g.includes("male")) {
+        detectedGender = "boy";
+      } else if (g.includes("girl") || g.includes("perempuan") || g.includes("wanita") || g.includes("female")) {
+        detectedGender = "girl";
       }
 
-      // Tangani kemungkinan format array langsung atau objek pembungkus { questions: [...], childGenderTone: "boy" }
-      let detectedGender: "boy" | "girl" | "neutral" = "neutral";
+      // Ambil array soal
       let itemsArray: Array<Record<string, unknown>> = [];
-
-      if (Array.isArray(parsedData)) {
-        itemsArray = parsedData as Array<Record<string, unknown>>;
-      } else if (parsedData && typeof parsedData === "object") {
-        const obj = parsedData as Record<string, unknown>;
-        const g = String(obj.childGenderTone || obj.gender || obj.genderTone || "").toLowerCase();
-        if (g.includes("boy") || g.includes("laki") || g.includes("pria") || g.includes("male")) {
-          detectedGender = "boy";
-        } else if (g.includes("girl") || g.includes("perempuan") || g.includes("wanita") || g.includes("female")) {
-          detectedGender = "girl";
-        }
-
+      if (Array.isArray(parsedObj)) {
+        itemsArray = parsedObj as Array<Record<string, unknown>>;
+      } else {
         for (const k of ["questions", "soal", "bank_soal", "items", "data", "quiz"]) {
-          if (Array.isArray(obj[k])) {
-            itemsArray = obj[k] as Array<Record<string, unknown>>;
+          if (Array.isArray(parsedObj[k])) {
+            itemsArray = parsedObj[k] as Array<Record<string, unknown>>;
             break;
           }
         }
       }
 
       if (itemsArray.length === 0) {
-        throw new Error(`Model ${TARGET_MODEL} tidak mengembalikan daftar soal dalam format array yang sesuai.`);
+        throw new Error("Model AI tidak mengembalikan daftar soal dalam format array yang sesuai.");
       }
 
       // Validasi dan normalisasi soal
@@ -249,5 +304,5 @@ Instruksi format keluaran (JSON Object):
     throw new Error("Permintaan kuis sedang penuh. Mohon coba 2 menit lagi ya! 🙏");
   }
 
-  throw lastError || new Error("Gagal membuat kuis dari AI.");
+  throw lastError || new Error("Koneksi AI sedang padat saat menyusun kuis. Silakan klik 'Coba lagi' ya! 🙏");
 }

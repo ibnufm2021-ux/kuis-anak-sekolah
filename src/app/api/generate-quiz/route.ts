@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
       subject,
       topic,
       difficulty,
-      activeCount: questionCount,
+      activeCount: Math.min(questionCount, questions.length),
       poolCount: questions.length,
       questions,
       genderTone,
@@ -104,9 +104,15 @@ export async function POST(req: NextRequest) {
   } catch (error: unknown) {
     const err = error instanceof Error ? error : new Error(String(error));
     console.error("Error in /api/generate-quiz:", err);
+
+    let clientMsg = err.message || "Terjadi kendala saat menyusun kuis.";
+    if (clientMsg.toLowerCase().includes("json") || clientMsg.includes("SyntaxError")) {
+      clientMsg = "Koneksi AI sempat terputus saat menyusun bank soal. Silakan klik 'Coba lagi' ya! 🙏";
+    }
+
     return NextResponse.json(
       {
-        error: err.message || "Terjadi kesalahan internal saat membuat kuis.",
+        error: clientMsg,
       },
       { status: 500 }
     );
